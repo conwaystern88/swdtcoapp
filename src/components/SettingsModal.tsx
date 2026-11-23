@@ -358,7 +358,8 @@ export function SettingsModal({
                       type="button"
                       onClick={() => {
                         onFactoryReset();
-                        handleClose();
+                        setConfirmFactoryReset(false);
+                        onClose();
                       }}
                       className="rounded-md bg-[#DC2626] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#B91C1C]"
                     >

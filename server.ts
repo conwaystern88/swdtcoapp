@@ -174,7 +174,7 @@ async function startServer() {
       if (status === 429 || errMsg.includes('RESOURCE_EXHAUSTED')) {
         res.status(429).json({
           error:
-            'Rate limit or quota reached for Live Search. Please wait a moment and try again, or select a billing-enabled API key in Settings > Secrets for higher quota.',
+            'Rate limit or quota reached for Live Search. Please wait a moment and try again.',
         });
         return;
       }
@@ -195,7 +195,7 @@ async function startServer() {
   } else {
     const distDir = path.resolve(__dirname, 'dist');
     app.use(express.static(distDir));
-    app.use((_req, res) => {
+    app.get('/{*splat}', (_req, res) => {
       const indexHtml = path.join(distDir, 'index.html');
       if (fs.existsSync(indexHtml)) {
         res.sendFile(indexHtml);

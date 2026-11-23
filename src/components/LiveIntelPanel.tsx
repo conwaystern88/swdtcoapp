@@ -185,24 +185,13 @@ export function LiveIntelPanel({
         }),
       });
 
-      const rawText = await response.text();
-      let payload: {
+      const payload = (await response.json()) as {
         answer?: string;
         sources?: GroundingSource[];
         searchQueries?: string[];
         updatedAt?: string;
         error?: string;
-      } = {};
-      if (rawText) {
-        try {
-          payload = JSON.parse(rawText) as typeof payload;
-        } catch {
-          if (!response.ok) {
-            throw new Error(`Search failed with status ${response.status}.`);
-          }
-          throw new Error('Received an unexpected response format from the server.');
-        }
-      }
+      };
 
       if (!response.ok) {
         throw new Error(payload.error || `Search failed with status ${response.status}.`);
