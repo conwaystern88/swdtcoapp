@@ -1,0 +1,229 @@
+{
+  "entities": {
+    "UserProgressDoc": {
+      "title": "UserProgressDoc",
+      "description": "Private progression state for a Star Wars Droid Tycoon player.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user who owns this progression profile."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100,
+          "description": "Optional friendly display name from Google profile."
+        },
+        "srbRank": {
+          "type": "integer",
+          "description": "Super Rebirth Rank (0 to 10000)."
+        },
+        "activeCycle": {
+          "type": "integer",
+          "description": "Active Rebirth Cycle number (1 to 10000)."
+        },
+        "activePath": {
+          "type": "integer",
+          "description": "Active Rebirth Path indicator (1 to 6)."
+        },
+        "currentRebirth": {
+          "type": "integer",
+          "description": "Current target Rebirth Tier (1 to 40)."
+        },
+        "completedAllTiersInCycle": {
+          "type": "boolean",
+          "description": "Whether all 40 tiers in the active cycle are complete."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile document was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile document was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "srbRank",
+        "activeCycle",
+        "activePath",
+        "currentRebirth",
+        "completedAllTiersInCycle",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OwnedDroidDoc": {
+      "title": "OwnedDroidDoc",
+      "description": "A logged owned droid stack in the player's hangar.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the owning player."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Droid name."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["Worker", "Astromech", "Battle", "Protocol"],
+          "description": "Official in-game droid class."
+        },
+        "rarity": {
+          "type": "string",
+          "enum": [
+            "Base",
+            "Gold",
+            "Diamond",
+            "Rainbow",
+            "Beskar",
+            "Galactic",
+            "Stellar",
+            "Kyber",
+            "Scourge"
+          ],
+          "description": "Droid rarity tier."
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Owned unit count (1 to 9999)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the droid entry was first logged."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the droid entry was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "type",
+        "rarity",
+        "quantity",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SuperRebirthHistoryDoc": {
+      "title": "SuperRebirthHistoryDoc",
+      "description": "Immutable record of a completed Super Rebirth transition.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the owning player."
+        },
+        "fromCycle": {
+          "type": "integer",
+          "description": "Cycle number before Super Rebirth (1 to 10000)."
+        },
+        "toCycle": {
+          "type": "integer",
+          "description": "Cycle number after Super Rebirth (1 to 10000)."
+        },
+        "fromPath": {
+          "type": "integer",
+          "description": "Path indicator before Super Rebirth (1 to 6)."
+        },
+        "toPath": {
+          "type": "integer",
+          "description": "Path indicator after Super Rebirth (1 to 6)."
+        },
+        "atRebirthTier": {
+          "type": "integer",
+          "description": "Completed Rebirth Tier reached before triggering SRB (0 to 40)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the Super Rebirth occurred."
+        }
+      },
+      "required": [
+        "ownerId",
+        "fromCycle",
+        "toCycle",
+        "fromPath",
+        "toPath",
+        "atRebirthTier",
+        "createdAt"
+      ]
+    },
+    "CustomDroidDoc": {
+      "title": "CustomDroidDoc",
+      "description": "A user-defined custom droid entry outside the built-in 101-droid roster.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the owning player."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Custom droid name."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["Worker", "Astromech", "Battle", "Protocol"],
+          "description": "Assigned droid class."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the custom droid was added."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the custom droid was last updated."
+        }
+      },
+      "required": ["ownerId", "name", "type", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProgressDoc" },
+      "description": "Private user progression document storing SRB Rank, active Cycle, active Path, and current Rebirth Tier."
+    },
+    "/users/{userId}/droids/{droidId}": {
+      "schema": { "$ref": "#/entities/OwnedDroidDoc" },
+      "description": "Subcollection of owned droids logged by the player."
+    },
+    "/users/{userId}/srbHistory/{entryId}": {
+      "schema": { "$ref": "#/entities/SuperRebirthHistoryDoc" },
+      "description": "Subcollection of immutable Super Rebirth history records."
+    },
+    "/users/{userId}/customDroids/{customDroidId}": {
+      "schema": { "$ref": "#/entities/CustomDroidDoc" },
+      "description": "Subcollection of custom droid catalog entries created by the player."
+    }
+  }
+}

@@ -1,0 +1,320 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Hardened Global Helpers
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidDroidType(val) {
+      return val is string && val in ['Worker', 'Astromech', 'Battle', 'Protocol'];
+    }
+
+    function isValidDroidRarity(val) {
+      return val is string && val in [
+        'Base',
+        'Gold',
+        'Diamond',
+        'Rainbow',
+        'Beskar',
+        'Galactic',
+        'Stellar',
+        'Kyber',
+        'Scourge'
+      ];
+    }
+
+    // Master Gate: Verify parent /users/{userId} exists and belongs to caller
+    function hasActiveUserParent(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+        get(/databases/$(database)/documents/users/$(userId)).data.ownerId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // Validation Blueprints (Anti-Update-Gap)
+    // =========================================================================
+
+    function isValidUserProgress(data, userId) {
+      return data.keys().hasAll([
+          'ownerId',
+          'srbRank',
+          'activeCycle',
+          'activePath',
+          'currentRebirth',
+          'completedAllTiersInCycle',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'displayName',
+          'srbRank',
+          'activeCycle',
+          'activePath',
+          'currentRebirth',
+          'completedAllTiersInCycle',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        data.srbRank is int && data.srbRank >= 0 && data.srbRank <= 10000 &&
+        data.activeCycle is int && data.activeCycle >= 1 && data.activeCycle <= 10000 &&
+        data.activePath is int && data.activePath >= 1 && data.activePath <= 6 &&
+        data.currentRebirth is int && data.currentRebirth >= 1 && data.currentRebirth <= 40 &&
+        data.completedAllTiersInCycle is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOwnedDroid(data, userId) {
+      return data.keys().hasAll([
+          'ownerId',
+          'name',
+          'type',
+          'rarity',
+          'quantity',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'name',
+          'type',
+          'rarity',
+          'quantity',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        isValidDroidType(data.type) &&
+        isValidDroidRarity(data.rarity) &&
+        data.quantity is int && data.quantity >= 1 && data.quantity <= 9999 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSrbHistoryEntry(data, userId) {
+      return data.keys().hasAll([
+          'ownerId',
+          'fromCycle',
+          'toCycle',
+          'fromPath',
+          'toPath',
+          'atRebirthTier',
+          'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'fromCycle',
+          'toCycle',
+          'fromPath',
+          'toPath',
+          'atRebirthTier',
+          'createdAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        data.fromCycle is int && data.fromCycle >= 1 && data.fromCycle <= 10000 &&
+        data.toCycle is int && data.toCycle >= data.fromCycle && data.toCycle <= 10000 &&
+        data.fromPath is int && data.fromPath >= 1 && data.fromPath <= 6 &&
+        data.toPath is int && data.toPath >= 1 && data.toPath <= 6 &&
+        data.atRebirthTier is int && data.atRebirthTier >= 0 && data.atRebirthTier <= 40 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidCustomDroid(data, userId) {
+      return data.keys().hasAll([
+          'ownerId',
+          'name',
+          'type',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'name',
+          'type',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        isValidDroidType(data.type) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // Collection: /users/{userId}
+    // =========================================================================
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isVerifiedUser() &&
+        isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUserProgress(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUserProgress(incoming(), userId) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action: Update progression state (tier, cycle, path, SRB rank, profile name)
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName',
+            'srbRank',
+            'activeCycle',
+            'activePath',
+            'currentRebirth',
+            'completedAllTiersInCycle',
+            'updatedAt'
+          ])
+        );
+
+      allow delete: if isVerifiedUser() && isOwner(userId) && isValidId(userId);
+
+      // -----------------------------------------------------------------------
+      // Subcollection: /users/{userId}/droids/{droidId}
+      // -----------------------------------------------------------------------
+      match /droids/{droidId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(droidId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(droidId) &&
+          isValidOwnedDroid(incoming(), userId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          hasActiveUserParent(userId);
+
+        allow update: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(droidId) &&
+          isValidOwnedDroid(incoming(), userId) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time && (
+            // Action: Adjust quantity or sync official droid class
+            incoming().diff(existing()).affectedKeys().hasOnly(['quantity', 'type', 'updatedAt'])
+          ) &&
+          hasActiveUserParent(userId);
+
+        allow delete: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(droidId) &&
+          hasActiveUserParent(userId);
+      }
+
+      // -----------------------------------------------------------------------
+      // Subcollection: /users/{userId}/srbHistory/{entryId}
+      // -----------------------------------------------------------------------
+      match /srbHistory/{entryId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(entryId) &&
+          isValidSrbHistoryEntry(incoming(), userId) &&
+          incoming().createdAt == request.time &&
+          hasActiveUserParent(userId);
+
+        // Super Rebirth history entries are immutable once recorded
+        allow update: if false;
+
+        allow delete: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(entryId) &&
+          hasActiveUserParent(userId);
+      }
+
+      // -----------------------------------------------------------------------
+      // Subcollection: /users/{userId}/customDroids/{customDroidId}
+      // -----------------------------------------------------------------------
+      match /customDroids/{customDroidId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(customDroidId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(customDroidId) &&
+          isValidCustomDroid(incoming(), userId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          hasActiveUserParent(userId);
+
+        allow update: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(customDroidId) &&
+          isValidCustomDroid(incoming(), userId) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time && (
+            // Action: Update custom droid class or name
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'type', 'updatedAt'])
+          ) &&
+          hasActiveUserParent(userId);
+
+        allow delete: if isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(customDroidId) &&
+          hasActiveUserParent(userId);
+      }
+    }
+  }
+}

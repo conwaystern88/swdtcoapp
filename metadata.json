@@ -1,0 +1,8 @@
+{
+  "name": "Star Wars Droid Tycoon Companion",
+  "description": "Offline-first progression tracker, Rebirth Roadmap (Tiers 1–40), Super Rebirth cycle manager, and Droid Inventory Analyzer for Fortnite UEFN Star Wars Droid Tycoon.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
